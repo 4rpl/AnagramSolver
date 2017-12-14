@@ -1,24 +1,52 @@
 package ru.ilyayudov.mas.Services
 
 import ru.ilyayudov.mas.DataModels.Toponym
-import ru.ilyayudov.mas.DataModels.ToponymType
 
 class AnagramSolver {
-    fun Solve(all: List<Toponym>, query: String, type: ToponymType, full: Boolean) : List<Toponym> {
+    fun Solve(all: List<Toponym>, query: String, full: Boolean) : List<Toponym> {
 
-        var sortedQuery = query.toSortedSet()
+        var sortedQuery = formatName(query)
         var q = all
+        val sortedName =
 
         if(full) {
-            q = q.filter { it.sortedName == sortedQuery }
+            q = q.filter { sortedQuery == formatName(it.name) }
         } else {
-            q = q.filter { it.sortedName.containsAll(sortedQuery) }
-        }
-
-        if(type != ToponymType.NotSet) {
-            q = q.filter { it.type == type }
+            q = q.filter { contains(sortedQuery, formatName(it.name)) }
         }
 
         return q
+    }
+
+    private fun contains(sortedQuery: String, sortedInput: String) : Boolean {
+
+        if(sortedInput.length < sortedQuery.length) {
+            return false
+        }
+
+        var i = 0
+        var j = 0
+        while(i < sortedQuery.length && j < sortedInput.length) {
+            if(sortedQuery[i] > sortedInput[j]) {
+                ++j
+            } else if(sortedQuery[i] < sortedInput[j]) {
+                return@contains false
+            } else {
+                ++i
+                ++j
+            }
+        }
+
+        return true
+    }
+
+    private fun formatName(name: String) : String {
+        return String(name
+                .replace(" ", "")
+                .replace("-", "")
+                .replace(".", "")
+                .toUpperCase()
+                .toCharArray()
+                .sortedArray())
     }
 }

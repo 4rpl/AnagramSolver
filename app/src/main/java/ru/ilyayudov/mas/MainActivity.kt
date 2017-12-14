@@ -10,42 +10,34 @@ import android.widget.ArrayAdapter
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 import ru.ilyayudov.mas.DataModels.Toponym
-import ru.ilyayudov.mas.DataModels.ToponymType
 import ru.ilyayudov.mas.Services.AnagramSolver
-import android.content.Intent
-import android.net.Uri
-import android.support.v4.content.ContextCompat.startActivity
-import android.widget.AdapterView
+import android.content.res.XmlResourceParser
 
 
 class MainActivity : AppCompatActivity() {
 
     private val anagramSolver = AnagramSolver()
-    private val toponymData = listOf<Toponym>(
-            Toponym("Абрикосовая", ToponymType.Street, "qwertyuiop".toSortedSet(), "geo:37.7749,-122.4194"),
-            Toponym("Апельсиновая", ToponymType.Street, "asdfghjkl".toSortedSet(), "geo:37.7749,-122.4194"),
-            Toponym("Вишнёвый", ToponymType.Lane, "zxcvbnm".toSortedSet(), "geo:37.7749,-122.4194")
-    )
+    private lateinit var toponymData : List<Toponym>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
 
-        typeSpinnerView.adapter = ArrayAdapter<ToponymType>(this, R.layout.support_simple_spinner_dropdown_item, ToponymType.values())
+        val parser = resources.getXml(R.xml.as_addrobj_msk_only_short)
+        toponymData = parse(parser)
 
         searchBtnView.setOnClickListener { view ->
             val anagram = anagramView.text.toString()
-            val type = typeSpinnerView.selectedItem as ToponymType
             val full = fullTextSearchRadioButtonView.isChecked
-            val results = anagramSolver.Solve(toponymData, anagram, type, full)
+            val results = anagramSolver.Solve(toponymData, anagram, full)
 
             searchResultListView.adapter = ArrayAdapter<Toponym>(this, R.layout.support_simple_spinner_dropdown_item, results)
             searchResultListView.setOnItemClickListener( { parent, view, position, id ->
                 val toponym = parent.getItemAtPosition(position) as Toponym
-                val gmmIntentUri = Uri.parse(toponym.uri)
-                val intent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
-                startActivity(intent)
+                //val gmmIntentUri = Uri.parse(toponym.uri)
+                //val intent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                //startActivity(intent)
             } )
 
             if(results.any()) {
@@ -70,5 +62,27 @@ class MainActivity : AppCompatActivity() {
             R.id.action_settings -> true
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    fun parse(parser: XmlResourceParser) : List<Toponym> {
+        val result = mutableListOf<Toponym>()
+
+        var eventType = parser.eventType
+        parser.next()
+
+        while (eventType != XmlResourceParser.END_DOCUMENT) {
+            eventType = parser.eventType
+            if(eventType == XmlResourceParser.START_TAG && parser.name == "OBJECT") {
+                val name = parser.getAttributeValue(null,"NAME")
+                val type = parser.getAttributeValue(null,"TYPE")
+                if(name != null) {
+                    val toponym = Toponym(name, type)
+                    result.add(toponym)
+                }
+            }
+            parser.next()
+        }
+
+        return result
     }
 }
